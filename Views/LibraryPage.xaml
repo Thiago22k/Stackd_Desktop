@@ -63,7 +63,7 @@
                             <StackPanel.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem Text="Play" Tag="{x:Bind}" Click="OnPlayContextClick"
-                                                    Visibility="{x:Bind HasExecutable}">
+                                                    Visibility="{x:Bind CanLaunch}">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE768;" />
                                         </MenuFlyoutItem.Icon>
@@ -86,7 +86,7 @@
                                 <Image Source="{Binding CoverImageUrl}" Stretch="UniformToFill" />
                                 <Border VerticalAlignment="Top" HorizontalAlignment="Left"
                                         Margin="8" CornerRadius="6" Padding="8,3"
-                                        Background="#B30B0B14">
+                                        Background="{StaticResource AccentTintBrush}">
                                     <TextBlock Text="{x:Bind StatusLabel}" FontSize="11" FontWeight="SemiBold"
                                                Foreground="{StaticResource AccentBrush}" />
                                 </Border>

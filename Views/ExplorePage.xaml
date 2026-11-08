@@ -101,7 +101,7 @@
                                     <Image Source="{Binding CoverDisplayUrl}" Stretch="UniformToFill" />
                                     <Border VerticalAlignment="Top" HorizontalAlignment="Right"
                                             Margin="8" CornerRadius="6" Padding="8,3"
-                                            Background="#B30B0B14">
+                                            Background="{StaticResource AccentTintBrush}">
                                         <TextBlock Text="{x:Bind RatingLabel}" FontSize="11" FontWeight="SemiBold"
                                                    Foreground="{StaticResource AccentBrush}" />
                                     </Border>
@@ -140,7 +140,7 @@
                                         <Image Source="{Binding CoverDisplayUrl}" Stretch="UniformToFill" />
                                         <Border VerticalAlignment="Top" HorizontalAlignment="Right"
                                                 Margin="8" CornerRadius="6" Padding="8,3"
-                                                Background="#B30B0B14">
+                                                Background="{StaticResource AccentTintBrush}">
                                             <TextBlock Text="{x:Bind RatingLabel}" FontSize="11" FontWeight="SemiBold"
                                                        Foreground="{StaticResource AccentBrush}" />
                                         </Border>
@@ -177,7 +177,7 @@
                                         <Image Source="{Binding CoverDisplayUrl}" Stretch="UniformToFill" />
                                         <Border VerticalAlignment="Top" HorizontalAlignment="Right"
                                                 Margin="8" CornerRadius="6" Padding="8,3"
-                                                Background="#B30B0B14">
+                                                Background="{StaticResource AccentTintBrush}">
                                             <TextBlock Text="{x:Bind ReleaseYearLabel}" FontSize="11" FontWeight="SemiBold"
                                                        Foreground="{StaticResource AccentBrush}" />
                                         </Border>

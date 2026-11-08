@@ -131,7 +131,7 @@
             <TextBox x:Name="NotesBox" Header="Notes"
                      AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
 
-            <TextBlock x:Name="ErrorText" Visibility="Collapsed" Foreground="#FF6B6B" FontSize="13" />
+            <TextBlock x:Name="ErrorText" Visibility="Collapsed" Foreground="{StaticResource DangerBrush}" FontSize="13" />
         </StackPanel>
     </ScrollViewer>
 </ContentDialog>

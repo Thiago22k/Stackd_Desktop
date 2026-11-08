@@ -16,7 +16,7 @@
 
             <!-- Banner: Steam no vinculado -->
             <Border Style="{StaticResource CardBorderStyle}"
-                    Visibility="{x:Bind ViewModel.IsSteamBannerVisible, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.ShowLinkBanner, Mode=OneWay}">
                 <Grid ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -33,10 +33,40 @@
                     </StackPanel>
                     <Button Grid.Column="2" Content="Link Account"
                             Style="{StaticResource PrimaryButtonStyle}"
-                            Command="{x:Bind ViewModel.LinkSteamCommand}" />
+                            Click="OnLinkSteamClick" />
                     <Button Grid.Column="3" Content="Dismiss"
                             Style="{StaticResource GhostButtonStyle}"
                             Command="{x:Bind ViewModel.DismissSteamBannerCommand}" />
+                </Grid>
+            </Border>
+
+            <!-- Steam vinculado: estado y sincronización -->
+            <Border Style="{StaticResource CardBorderStyle}"
+                    Visibility="{x:Bind ViewModel.IsSteamLinked, Mode=OneWay}">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon Glyph="&#xE774;" FontSize="26" Foreground="{StaticResource VioletBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind ViewModel.SteamTitle, Mode=OneWay}" FontWeight="SemiBold" FontSize="14"
+                                   Foreground="{StaticResource TextPrimaryBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.SyncStatus, Mode=OneWay}"
+                                   Style="{StaticResource SecondaryTextStyle}" FontSize="12"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ProgressRing Grid.Column="2" Width="24" Height="24" VerticalAlignment="Center"
+                                  IsActive="{x:Bind ViewModel.IsSyncing, Mode=OneWay}" />
+                    <Button Grid.Column="3" Content="Sync now"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{x:Bind ViewModel.SyncSteamCommand}" />
+                    <Button Grid.Column="4" Content="Manage"
+                            Style="{StaticResource GhostButtonStyle}"
+                            Click="OnManageSteamClick" />
                 </Grid>
             </Border>
 
@@ -60,7 +90,7 @@
                                 <Rectangle.Fill>
                                     <LinearGradientBrush StartPoint="0.5,0.35" EndPoint="0.5,1">
                                         <GradientStop Color="#00000000" Offset="0" />
-                                        <GradientStop Color="#E60B0B14" Offset="1" />
+                                        <GradientStop Color="#E60A0D17" Offset="1" />
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
                             </Rectangle>
@@ -70,7 +100,7 @@
                                 <TextBlock Text="{x:Bind LastPlayedLabel}" FontSize="14" HorizontalAlignment="Left"
                                            Foreground="{StaticResource TextPrimaryBrush}" />
                                 <Border HorizontalAlignment="Right" CornerRadius="8" Padding="10,4"
-                                        Background="#99171722">
+                                        Background="{StaticResource AccentTintBrush}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE735;" FontSize="12" Foreground="{StaticResource AccentBrush}" />
                                         <TextBlock Text="{x:Bind AchievementsLabel}" FontSize="12" FontWeight="SemiBold" />
@@ -80,7 +110,7 @@
 
                             <!-- Título, horas y botón -->
                             <StackPanel VerticalAlignment="Bottom" Margin="16,0,16,16" Spacing="8">
-                                <Border HorizontalAlignment="Left" CornerRadius="8" Padding="10,4" Background="#99171722">
+                                <Border HorizontalAlignment="Left" CornerRadius="8" Padding="10,4" Background="{StaticResource SurfaceAltBrush}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE916;" FontSize="12" />
                                         <TextBlock Text="{x:Bind PlaytimeLabel}" FontSize="12" />
@@ -90,7 +120,7 @@
                                            TextTrimming="CharacterEllipsis" />
                                 <Button Style="{StaticResource VioletButtonStyle}" Padding="14,6"
                                         Tag="{x:Bind}"
-                                        IsEnabled="{x:Bind HasExecutable}"
+                                        IsEnabled="{x:Bind CanLaunch}"
                                         Click="OnContinueClick">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE768;" FontSize="12" />

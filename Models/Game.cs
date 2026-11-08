@@ -60,6 +60,10 @@ public class Game
     [NotMapped]
     public bool HasExecutable => !string.IsNullOrWhiteSpace(ExecutablePath);
 
+    /// <summary>Se puede abrir desde Stackd: por su .exe o, si viene de Steam, mediante steam://.</summary>
+    [NotMapped]
+    public bool CanLaunch => HasExecutable || SteamAppId.HasValue;
+
     [NotMapped]
     public string StatusLabel => Status.ToString();
 

@@ -12,6 +12,13 @@ public class SecretsService : ISecretsService
     public bool HasTwitchCredentials =>
         !string.IsNullOrWhiteSpace(TwitchClientId) && !string.IsNullOrWhiteSpace(TwitchClientSecret);
 
+    public string? SteamApiKey { get; private set; }
+    public string? SteamId { get; private set; }
+    public string? SteamPersonaName { get; private set; }
+
+    public bool HasSteamLink =>
+        !string.IsNullOrWhiteSpace(SteamApiKey) && !string.IsNullOrWhiteSpace(SteamId);
+
     private static readonly string[] CandidatePaths = new[]
     {
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Stackd", "secrets.json"),
@@ -22,6 +29,9 @@ public class SecretsService : ISecretsService
     {
         TwitchClientId = null;
         TwitchClientSecret = null;
+        SteamApiKey = null;
+        SteamId = null;
+        SteamPersonaName = null;
 
         foreach (var path in CandidatePaths)
         {
@@ -33,17 +43,36 @@ public class SecretsService : ISecretsService
                 var node = JsonNode.Parse(json);
                 if (node is null) continue;
 
-                var twitch = node["Twitch"] ?? node["IGDB"] ?? node;
-
-                var id = (twitch["IgdbClientId"] ?? twitch["ClientId"] ?? twitch["Client_Id"] ?? twitch["client_id"] ?? twitch["TwitchClientId"])?.GetValue<string>()?.Trim();
-                var secret = (twitch["IgdbClientSecret"] ?? twitch["ClientSecret"] ?? twitch["Client_Secret"] ?? twitch["client_secret"] ?? twitch["TwitchClientSecret"])?.GetValue<string>()?.Trim();
-
-                if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(secret))
+                if (!HasTwitchCredentials)
                 {
-                    TwitchClientId = id;
-                    TwitchClientSecret = secret;
-                    return;
+                    var twitch = node["Twitch"] ?? node["IGDB"] ?? node;
+
+                    var id = (twitch["IgdbClientId"] ?? twitch["ClientId"] ?? twitch["Client_Id"] ?? twitch["client_id"] ?? twitch["TwitchClientId"])?.GetValue<string>()?.Trim();
+                    var secret = (twitch["IgdbClientSecret"] ?? twitch["ClientSecret"] ?? twitch["Client_Secret"] ?? twitch["client_secret"] ?? twitch["TwitchClientSecret"])?.GetValue<string>()?.Trim();
+
+                    if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(secret))
+                    {
+                        TwitchClientId = id;
+                        TwitchClientSecret = secret;
+                    }
                 }
+
+                if (!HasSteamLink)
+                {
+                    var steam = node["Steam"] ?? node;
+
+                    var key = (steam["SteamApiKey"] ?? steam["ApiKey"])?.GetValue<string>()?.Trim();
+                    var steamId = (steam["SteamId"] ?? steam["SteamID"])?.GetValue<string>()?.Trim();
+
+                    if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(steamId))
+                    {
+                        SteamApiKey = key;
+                        SteamId = steamId;
+                        SteamPersonaName = steam["SteamPersonaName"]?.GetValue<string>()?.Trim();
+                    }
+                }
+
+                if (HasTwitchCredentials && HasSteamLink) return;
             }
             catch
             {
@@ -57,6 +86,49 @@ public class SecretsService : ISecretsService
         TwitchClientId = clientId.Trim();
         TwitchClientSecret = clientSecret.Trim();
 
+        await UpdateFileAsync(root =>
+        {
+            // Guardamos con compatibilidad amplia
+            root["IgdbClientId"] = TwitchClientId;
+            root["IgdbClientSecret"] = TwitchClientSecret;
+        });
+    }
+
+    public async Task SaveSteamLinkAsync(string apiKey, string steamId, string? personaName)
+    {
+        SteamApiKey = apiKey.Trim();
+        SteamId = steamId.Trim();
+        SteamPersonaName = string.IsNullOrWhiteSpace(personaName) ? null : personaName.Trim();
+
+        await UpdateFileAsync(root =>
+        {
+            root.Remove("Steam"); // por si el usuario lo había escrito anidado a mano
+            root["SteamApiKey"] = SteamApiKey;
+            root["SteamId"] = SteamId;
+            root["SteamPersonaName"] = SteamPersonaName;
+        });
+    }
+
+    public async Task ClearSteamLinkAsync()
+    {
+        SteamApiKey = null;
+        SteamId = null;
+        SteamPersonaName = null;
+
+        await UpdateFileAsync(root =>
+        {
+            root.Remove("Steam");
+            root.Remove("SteamApiKey");
+            root.Remove("ApiKey");
+            root.Remove("SteamId");
+            root.Remove("SteamID");
+            root.Remove("SteamPersonaName");
+        });
+    }
+
+    /// <summary>Lee secrets.json (si existe), aplica el cambio y lo vuelve a escribir.</summary>
+    private static async Task UpdateFileAsync(Action<JsonObject> mutate)
+    {
         // Si ya existe en alguno de los dos lugares, se actualiza allí; si no, en LocalApplicationData
         var targetPath = CandidatePaths.FirstOrDefault(File.Exists) ?? CandidatePaths[0];
 
@@ -78,9 +150,7 @@ public class SecretsService : ISecretsService
             root = new JsonObject();
         }
 
-        // Guardamos con compatibilidad amplia
-        root["IgdbClientId"] = TwitchClientId;
-        root["IgdbClientSecret"] = TwitchClientSecret;
+        mutate(root);
 
         var dir = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))

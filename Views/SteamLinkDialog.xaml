@@ -1,0 +1,37 @@
+<ContentDialog
+    x:Class="Stackd.Views.SteamLinkDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Link Steam account"
+    PrimaryButtonText="Link"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <ScrollViewer MaxHeight="520">
+        <StackPanel Spacing="14" MinWidth="440" Padding="0,0,12,0">
+            <TextBlock x:Name="IntroText" TextWrapping="Wrap"
+                       Style="{StaticResource SecondaryTextStyle}"
+                       Text="Stackd reads your library, playtime and achievements through the Steam Web API. Your key is stored only on this PC." />
+
+            <PasswordBox x:Name="ApiKeyBox" Header="Steam Web API key"
+                         PlaceholderText="32-character key" />
+
+            <HyperlinkButton Padding="0" Content="Get your key at steamcommunity.com/dev/apikey"
+                             NavigateUri="https://steamcommunity.com/dev/apikey" />
+
+            <TextBox x:Name="ProfileBox" Header="Steam profile"
+                     PlaceholderText="Profile URL, custom name or SteamID64" />
+
+            <TextBlock TextWrapping="Wrap" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Text="In Steam → Profile → Edit Profile → Privacy Settings, “My profile” and “Game details” must be Public. When Steam asks for a domain name for the key, any value works (for example: localhost)." />
+
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <ProgressRing x:Name="Busy" Width="20" Height="20" IsActive="False" Visibility="Collapsed" />
+                <TextBlock x:Name="ErrorText" Visibility="Collapsed" Foreground="#FF6B6B"
+                           FontSize="13" TextWrapping="Wrap" MaxWidth="400" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

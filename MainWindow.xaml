@@ -11,7 +11,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- ===== Barra lateral ===== -->
-        <Grid Background="{StaticResource SidebarBrush}" Padding="12,20,12,16">
+        <Grid Background="{StaticResource SidebarBrush}" Padding="12,20,12,16"
+              BorderBrush="{StaticResource StrokeBrush}" BorderThickness="0,0,1,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />

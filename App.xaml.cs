@@ -35,6 +35,7 @@ public partial class App : Application
                 services.AddSingleton<IGameLauncher, GameLauncher>();
                 services.AddSingleton<ISecretsService, SecretsService>();
                 services.AddSingleton<IIgdbService, IgdbService>();
+                services.AddSingleton<ISteamService, SteamService>();
 
                 // ViewModels
                 services.AddSingleton<ShellViewModel>();

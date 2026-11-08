@@ -13,11 +13,19 @@ public partial class HomeViewModel : ObservableObject
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly IGameLauncher _launcher;
+    private readonly ISteamService _steam;
+    private readonly ISecretsService _secrets;
 
-    public HomeViewModel(IDbContextFactory<AppDbContext> dbFactory, IGameLauncher launcher)
+    public HomeViewModel(
+        IDbContextFactory<AppDbContext> dbFactory,
+        IGameLauncher launcher,
+        ISteamService steam,
+        ISecretsService secrets)
     {
         _dbFactory = dbFactory;
         _launcher = launcher;
+        _steam = steam;
+        _secrets = secrets;
         _launcher.GameExited += OnGameExited;
     }
 
@@ -36,11 +44,34 @@ public partial class HomeViewModel : ObservableObject
     private string _userName = "Guest";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowLinkBanner))]
     private bool _isSteamBannerVisible = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowLinkBanner))]
+    [NotifyCanExecuteChangedFor(nameof(SyncSteamCommand))]
+    private bool _isSteamLinked;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SteamTitle))]
+    private string _steamPersonaName = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SyncSteamCommand))]
+    private bool _isSyncing;
+
+    [ObservableProperty]
+    private string _syncStatus = "Not synced yet in this session";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyState))]
     private bool _hasRecentGames;
+
+    public bool ShowLinkBanner => !IsSteamLinked && IsSteamBannerVisible;
+
+    public string SteamTitle => string.IsNullOrWhiteSpace(SteamPersonaName)
+        ? "STEAM ACCOUNT LINKED"
+        : $"STEAM · {SteamPersonaName}";
 
     public bool ShowEmptyState => !HasRecentGames;
 
@@ -53,15 +84,56 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand]
     private void DismissSteamBanner() => IsSteamBannerVisible = false;
 
-    [RelayCommand]
-    private void LinkSteam()
+    /// <summary>Relee secrets.json y actualiza el estado de la vinculación con Steam.</summary>
+    public async Task RefreshSteamStateAsync()
     {
-        // Fase 5: iniciar el flujo de vinculación con Steam.
+        await _secrets.LoadAsync();
+
+        IsSteamLinked = _secrets.HasSteamLink;
+        SteamPersonaName = _secrets.SteamPersonaName ?? string.Empty;
+        UserName = IsSteamLinked && !string.IsNullOrWhiteSpace(SteamPersonaName) ? SteamPersonaName : "Guest";
+    }
+
+    /// <summary>Desvincula la cuenta. Los juegos ya importados se conservan.</summary>
+    public async Task UnlinkSteamAsync()
+    {
+        await _steam.UnlinkAsync();
+        SyncStatus = "Not synced yet in this session";
+        await RefreshSteamStateAsync();
+    }
+
+    private bool CanSyncSteam() => IsSteamLinked && !IsSyncing;
+
+    [RelayCommand(CanExecute = nameof(CanSyncSteam))]
+    public async Task SyncSteamAsync()
+    {
+        IsSyncing = true;
+        SyncStatus = "Starting…";
+
+        try
+        {
+            // Progress<T> se crea en el hilo de la interfaz, así que las actualizaciones llegan a él.
+            var progress = new Progress<string>(message => SyncStatus = message);
+            var result = await _steam.SyncAsync(progress);
+
+            SyncStatus = result.Success ? result.Summary : result.Error ?? "Sync failed.";
+            if (result.Success) await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            SyncStatus = $"Sync failed: {ex.Message}";
+        }
+        finally
+        {
+            IsSyncing = false;
+        }
     }
 
     [RelayCommand]
     public async Task LoadAsync()
     {
+        await RefreshSteamStateAsync();
+
         await using var db = await _dbFactory.CreateDbContextAsync();
 
         var games = await db.Games

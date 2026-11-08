@@ -75,6 +75,11 @@ public class GameLauncher : IGameLauncher
         var game = await db.Games.FindAsync(gameId);
 
         if (game is null) return "Game not found.";
+
+        // Juego de Steam sin ejecutable propio: se abre a través de Steam.
+        if (string.IsNullOrWhiteSpace(game.ExecutablePath) && game.SteamAppId.HasValue)
+            return await LaunchViaSteamAsync(db, game);
+
         if (string.IsNullOrWhiteSpace(game.ExecutablePath))
             return "This game has no executable yet. Open it in Library and select its .exe.";
         if (!File.Exists(game.ExecutablePath))
@@ -116,6 +121,33 @@ public class GameLauncher : IGameLauncher
         await db.SaveChangesAsync();
 
         _ = TrackSessionAsync(gameId, process);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Abre el juego con steam://rungameid. Steam no entrega el proceso del juego, así que Stackd no cuenta
+    /// la sesión ni pasa a segundo plano: las horas se actualizan al sincronizar con Steam.
+    /// </summary>
+    private static async Task<string?> LaunchViaSteamAsync(AppDbContext db, Game game)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = $"steam://rungameid/{game.SteamAppId}",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            return $"Could not open Steam. Is it installed? ({ex.Message})";
+        }
+
+        game.LastPlayedAtUtc = DateTime.UtcNow;
+        if (game.Status is PlayStatus.Backlog or PlayStatus.Wishlist)
+            game.Status = PlayStatus.Playing;
+        await db.SaveChangesAsync();
 
         return null;
     }
