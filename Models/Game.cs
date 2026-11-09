@@ -57,6 +57,10 @@ public class Game
     [NotMapped]
     public string AchievementsLabel => $"{AchievementsUnlocked}/{AchievementsTotal}";
 
+    /// <summary>El juego viene de (o está vinculado con) la biblioteca de Steam.</summary>
+    [NotMapped]
+    public bool IsSteam => SteamAppId.HasValue;
+
     [NotMapped]
     public bool HasExecutable => !string.IsNullOrWhiteSpace(ExecutablePath);
 

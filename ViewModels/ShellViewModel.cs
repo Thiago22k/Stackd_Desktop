@@ -12,7 +12,7 @@ public partial class ShellViewModel : ObservableObject
         new("Library",     "", typeof(LibraryPage)),
         new("Explore",     "", typeof(ExplorePage)),
         new("Stats",       "", typeof(PlaceholderPage), "Estadísticas de tu tiempo de juego."),
-        new("Collections", "", typeof(PlaceholderPage), "Listas personalizadas de videojuegos."),
+        new("Collections", "", typeof(CollectionsPage)),
         new("Recommended", "", typeof(PlaceholderPage), "Recomendaciones profundas con IA."),
     };
 

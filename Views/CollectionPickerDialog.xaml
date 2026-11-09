@@ -1,0 +1,46 @@
+<ContentDialog
+    x:Class="Stackd.Views.CollectionPickerDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Stackd.Models"
+    Title="Add to collection"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <StackPanel Spacing="12" MinWidth="440">
+        <TextBlock x:Name="GameText" Style="{StaticResource SecondaryTextStyle}" TextTrimming="CharacterEllipsis" />
+
+        <ListView x:Name="CollectionsList" SelectionMode="None" MaxHeight="300">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="models:CollectionPickItem">
+                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="280" />
+                            <TextBlock Text="{x:Bind CountLabel}" FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{StaticResource MutedBrush}" />
+                        </StackPanel>
+                    </CheckBox>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock x:Name="EmptyText" Visibility="Collapsed" TextWrapping="Wrap"
+                   Style="{StaticResource SecondaryTextStyle}"
+                   Text="You don't have any collections yet. Create the first one below." />
+
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="NewNameBox" PlaceholderText="New collection name" MaxLength="120"
+                     KeyDown="OnNewNameKeyDown" />
+            <Button Grid.Column="1" Content="Create" Style="{StaticResource GhostButtonStyle}"
+                    Click="OnCreateClick" />
+        </Grid>
+
+        <TextBlock x:Name="ErrorText" Visibility="Collapsed" Foreground="{StaticResource DangerBrush}" FontSize="13" />
+    </StackPanel>
+</ContentDialog>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Stackd.Data;
@@ -24,6 +25,8 @@ public class SecretsService : ISecretsService
 
     public bool HasSteamLink => !string.IsNullOrWhiteSpace(SteamId);
 
+    public DateTime? SteamLastSyncUtc { get; private set; }
+
     private static string? NormalizeUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return null;
@@ -47,6 +50,7 @@ public class SecretsService : ISecretsService
         SteamApiKey = null;
         SteamId = null;
         SteamPersonaName = null;
+        SteamLastSyncUtc = null;
         ServerUrl = NormalizeUrl(AppConfig.DefaultServerUrl);
 
         foreach (var path in CandidatePaths)
@@ -87,6 +91,13 @@ public class SecretsService : ISecretsService
                         SteamId = steamId;
                         SteamPersonaName = steam["SteamPersonaName"]?.GetValue<string>()?.Trim();
                     }
+                }
+
+                if (SteamLastSyncUtc is null &&
+                    node["SteamLastSyncUtc"]?.GetValue<string>() is { } lastSync &&
+                    DateTime.TryParse(lastSync, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+                {
+                    SteamLastSyncUtc = parsed.ToUniversalTime();
                 }
 
                 // Permite probar un servidor sin recompilar (anula AppConfig.DefaultServerUrl).
@@ -131,8 +142,15 @@ public class SecretsService : ISecretsService
         });
     }
 
+    public async Task SaveSteamLastSyncAsync(DateTime utc)
+    {
+        SteamLastSyncUtc = utc;
+        await UpdateFileAsync(root => root["SteamLastSyncUtc"] = utc.ToString("O", CultureInfo.InvariantCulture));
+    }
+
     public async Task ClearSteamLinkAsync()
     {
+        SteamLastSyncUtc = null;
         SteamApiKey = null;
         SteamId = null;
         SteamPersonaName = null;
@@ -145,6 +163,7 @@ public class SecretsService : ISecretsService
             root.Remove("SteamId");
             root.Remove("SteamID");
             root.Remove("SteamPersonaName");
+            root.Remove("SteamLastSyncUtc");
         });
     }
 

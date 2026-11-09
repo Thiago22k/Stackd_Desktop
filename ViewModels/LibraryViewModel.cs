@@ -11,6 +11,9 @@ namespace Stackd.ViewModels;
 public partial class LibraryViewModel : ObservableObject
 {
     public const string AllFilter = "All";
+    public const string AllSources = "All sources";
+    public const string SteamSource = "Steam";
+    public const string NotSteamSource = "Not on Steam";
 
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly IGameLauncher _launcher;
@@ -23,6 +26,7 @@ public partial class LibraryViewModel : ObservableObject
         _launcher.GameExited += OnGameExited;
 
         StatusFilters = new[] { AllFilter }.Concat(Enum.GetNames<PlayStatus>()).ToList();
+        SourceFilters = new[] { AllSources, SteamSource, NotSteamSource };
         SortOptions = new[]
         {
             "Title (A-Z)",
@@ -43,6 +47,7 @@ public partial class LibraryViewModel : ObservableObject
     public Task<string?> LaunchAsync(Game game) => _launcher.LaunchAsync(game.Id);
 
     public IReadOnlyList<string> StatusFilters { get; }
+    public IReadOnlyList<string> SourceFilters { get; }
     public IReadOnlyList<string> SortOptions { get; }
 
     /// <summary>Juegos visibles (ya filtrados y ordenados).</summary>
@@ -55,6 +60,9 @@ public partial class LibraryViewModel : ObservableObject
     private string _selectedFilter = AllFilter;
 
     [ObservableProperty]
+    private string _selectedSource = AllSources;
+
+    [ObservableProperty]
     private string _selectedSort = "Title (A-Z)";
 
     public bool ShowEmptyState => Games.Count == 0;
@@ -64,6 +72,8 @@ public partial class LibraryViewModel : ObservableObject
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
     partial void OnSelectedFilterChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedSourceChanged(string value) => ApplyFilter();
 
     partial void OnSelectedSortChanged(string value) => ApplyFilter();
 
@@ -106,6 +116,11 @@ public partial class LibraryViewModel : ObservableObject
 
         if (SelectedFilter != AllFilter && Enum.TryParse<PlayStatus>(SelectedFilter, out var status))
             query = query.Where(g => g.Status == status);
+
+        if (SelectedSource == SteamSource)
+            query = query.Where(g => g.IsSteam);
+        else if (SelectedSource == NotSteamSource)
+            query = query.Where(g => !g.IsSteam);
 
         var text = SearchText.Trim();
         if (text.Length > 0)

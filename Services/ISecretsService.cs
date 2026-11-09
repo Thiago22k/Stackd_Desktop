@@ -20,8 +20,12 @@ public interface ISecretsService
     /// <summary>Hay una cuenta de Steam vinculada (la API key es opcional: con servidor no se necesita).</summary>
     bool HasSteamLink { get; }
 
+    /// <summary>Última sincronización de Steam terminada con éxito (UTC). Null si nunca se ha hecho.</summary>
+    DateTime? SteamLastSyncUtc { get; }
+
     Task LoadAsync();
     Task SaveTwitchCredentialsAsync(string clientId, string clientSecret);
     Task SaveSteamLinkAsync(string? apiKey, string steamId, string? personaName);
+    Task SaveSteamLastSyncAsync(DateTime utc);
     Task ClearSteamLinkAsync();
 }

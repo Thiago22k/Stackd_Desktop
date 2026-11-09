@@ -36,12 +36,15 @@ public partial class App : Application
                 services.AddSingleton<ISecretsService, SecretsService>();
                 services.AddSingleton<IIgdbService, IgdbService>();
                 services.AddSingleton<ISteamService, SteamService>();
+                services.AddSingleton<ICollectionService, CollectionService>();
 
                 // ViewModels
                 services.AddSingleton<ShellViewModel>();
                 services.AddTransient<HomeViewModel>();
                 services.AddTransient<LibraryViewModel>();
                 services.AddTransient<ExploreViewModel>();
+                services.AddTransient<CollectionsViewModel>();
+                services.AddTransient<CollectionDetailViewModel>();
 
                 // Ventanas
                 services.AddSingleton<MainWindow>();

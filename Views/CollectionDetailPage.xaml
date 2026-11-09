@@ -1,0 +1,100 @@
+<Page
+    x:Class="Stackd.Views.CollectionDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Stackd.Models"
+    Background="{StaticResource AppBackgroundBrush}">
+
+    <Grid Padding="40,32,40,0" RowSpacing="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <Grid Grid.Row="0" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Style="{StaticResource GhostButtonStyle}" VerticalAlignment="Center"
+                    Click="OnBackClick" ToolTipService.ToolTip="Back to collections">
+                <FontIcon Glyph="&#xE72B;" FontSize="14" />
+            </Button>
+
+            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="{x:Bind ViewModel.Name, Mode=OneWay}" Style="{StaticResource PageTitleStyle}"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind ViewModel.Description, Mode=OneWay}" TextWrapping="Wrap"
+                           Style="{StaticResource SecondaryTextStyle}"
+                           Visibility="{x:Bind ViewModel.HasDescription, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ViewModel.CountLabel, Mode=OneWay}"
+                           Style="{StaticResource SecondaryTextStyle}" FontSize="12" />
+            </StackPanel>
+
+            <Button Grid.Column="2" Style="{StaticResource GhostButtonStyle}" VerticalAlignment="Center"
+                    Content="Edit" Click="OnEditClick" />
+
+            <Button Grid.Column="3" Style="{StaticResource PrimaryButtonStyle}" VerticalAlignment="Center"
+                    Click="OnAddGamesClick">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE710;" FontSize="14" />
+                    <TextBlock Text="Add games" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Juegos -->
+        <Grid Grid.Row="1">
+            <TextBlock Text="This collection is empty. Press “Add games” to pick some from your library."
+                       Style="{StaticResource SecondaryTextStyle}"
+                       Visibility="{x:Bind ViewModel.ShowEmptyState, Mode=OneWay}" />
+
+            <GridView ItemsSource="{x:Bind ViewModel.Games}"
+                      SelectionMode="None"
+                      IsItemClickEnabled="False"
+                      Padding="0,0,0,32">
+                <GridView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Game">
+                        <StackPanel Width="190" Spacing="8">
+                            <StackPanel.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="Play" Tag="{x:Bind}" Click="OnPlayContextClick"
+                                                    Visibility="{x:Bind CanLaunch}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE768;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Remove from collection" Tag="{x:Bind}" Click="OnRemoveContextClick">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE738;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </StackPanel.ContextFlyout>
+
+                            <Grid Height="253" CornerRadius="10" Background="{StaticResource SurfaceBrush}">
+                                <Image Source="{Binding CoverImageUrl}" Stretch="UniformToFill" />
+                                <Border VerticalAlignment="Top" HorizontalAlignment="Left"
+                                        Margin="8" CornerRadius="6" Padding="8,3"
+                                        Background="{StaticResource AccentTintBrush}">
+                                    <TextBlock Text="{x:Bind StatusLabel}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentBrush}" />
+                                </Border>
+                            </Grid>
+
+                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{StaticResource TextPrimaryBrush}" />
+                            <TextBlock Text="{x:Bind PlaytimeLabel}" FontSize="12"
+                                       Style="{StaticResource SecondaryTextStyle}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+        </Grid>
+    </Grid>
+</Page>

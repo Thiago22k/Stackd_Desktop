@@ -35,6 +35,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBox PlaceholderText="Search your library"
                      Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -42,6 +43,9 @@
                       ItemsSource="{x:Bind ViewModel.StatusFilters}"
                       SelectedItem="{x:Bind ViewModel.SelectedFilter, Mode=TwoWay}" />
             <ComboBox Grid.Column="2" Width="160"
+                      ItemsSource="{x:Bind ViewModel.SourceFilters}"
+                      SelectedItem="{x:Bind ViewModel.SelectedSource, Mode=TwoWay}" />
+            <ComboBox Grid.Column="3" Width="160"
                       ItemsSource="{x:Bind ViewModel.SortOptions}"
                       SelectedItem="{x:Bind ViewModel.SelectedSort, Mode=TwoWay}" />
         </Grid>
@@ -68,6 +72,11 @@
                                             <FontIcon Glyph="&#xE768;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Add to collection…" Tag="{x:Bind}" Click="OnAddToCollectionClick">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE710;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
                                     <MenuFlyoutItem Text="Edit" Tag="{x:Bind}" Click="OnEditContextClick">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE70F;" />
@@ -89,6 +98,13 @@
                                         Background="{StaticResource AccentTintBrush}">
                                     <TextBlock Text="{x:Bind StatusLabel}" FontSize="11" FontWeight="SemiBold"
                                                Foreground="{StaticResource AccentBrush}" />
+                                </Border>
+                                <Border VerticalAlignment="Top" HorizontalAlignment="Right"
+                                        Margin="8" CornerRadius="6" Padding="8,3"
+                                        Background="{StaticResource VioletTintBrush}"
+                                        Visibility="{x:Bind IsSteam}">
+                                    <TextBlock Text="STEAM" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource VioletBrush}" />
                                 </Border>
                             </Grid>
 

@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Stackd.Models;
+using Stackd.Services;
 using Stackd.ViewModels;
 
 namespace Stackd.Views;
@@ -35,6 +36,18 @@ public sealed partial class LibraryPage : Page
         {
             await LaunchGameAsync(game);
         }
+    }
+
+    private async void OnAddToCollectionClick(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).Tag is not Game game) return;
+
+        var collections = App.GetService<ICollectionService>();
+        var dialog = new CollectionPickerDialog(game, collections) { XamlRoot = XamlRoot };
+        await dialog.InitializeAsync();
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            await collections.SetMembershipAsync(game.Id, dialog.SelectedCollectionIds);
     }
 
     private async void OnEditContextClick(object sender, RoutedEventArgs e)

@@ -11,6 +11,12 @@ namespace Stackd.ViewModels;
 #pragma warning disable MVVMTK0045
 public partial class HomeViewModel : ObservableObject
 {
+    private const string DefaultSyncStatus = "Not synced yet";
+    private static readonly TimeSpan AutoSyncInterval = TimeSpan.FromHours(24);
+
+    /// <summary>La comprobación de sincronización automática se hace una sola vez por sesión de la app.</summary>
+    private static bool _autoSyncChecked;
+
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly IGameLauncher _launcher;
     private readonly ISteamService _steam;
@@ -61,7 +67,7 @@ public partial class HomeViewModel : ObservableObject
     private bool _isSyncing;
 
     [ObservableProperty]
-    private string _syncStatus = "Not synced yet in this session";
+    private string _syncStatus = DefaultSyncStatus;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyState))]
@@ -92,13 +98,16 @@ public partial class HomeViewModel : ObservableObject
         IsSteamLinked = _secrets.HasSteamLink;
         SteamPersonaName = _secrets.SteamPersonaName ?? string.Empty;
         UserName = IsSteamLinked && !string.IsNullOrWhiteSpace(SteamPersonaName) ? SteamPersonaName : "Guest";
+
+        if (IsSteamLinked && !IsSyncing && SyncStatus == DefaultSyncStatus && _secrets.SteamLastSyncUtc is { } last)
+            SyncStatus = $"Last synced {last.ToLocalTime():d MMM, HH:mm}";
     }
 
     /// <summary>Desvincula la cuenta. Los juegos ya importados se conservan.</summary>
     public async Task UnlinkSteamAsync()
     {
         await _steam.UnlinkAsync();
-        SyncStatus = "Not synced yet in this session";
+        SyncStatus = DefaultSyncStatus;
         await RefreshSteamStateAsync();
     }
 
@@ -145,6 +154,23 @@ public partial class HomeViewModel : ObservableObject
         RecentGames.Clear();
         foreach (var g in games) RecentGames.Add(g);
         HasRecentGames = RecentGames.Count > 0;
+
+        await TryAutoSyncAsync();
+    }
+
+    /// <summary>Sincroniza con Steam al abrir la app si la última sincronización tiene más de 24 horas.</summary>
+    private async Task TryAutoSyncAsync()
+    {
+        if (_autoSyncChecked) return;
+        _autoSyncChecked = true;
+
+        if (!IsSteamLinked || IsSyncing) return;
+
+        var last = _secrets.SteamLastSyncUtc;
+        if (last is not null && DateTime.UtcNow - last.Value < AutoSyncInterval) return;
+
+        if (SyncSteamCommand.CanExecute(null))
+            await SyncSteamCommand.ExecuteAsync(null);
     }
 }
 #pragma warning restore MVVMTK0045

@@ -1,0 +1,34 @@
+<ContentDialog
+    x:Class="Stackd.Views.GamePickerDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Stackd.Models"
+    Title="Add games"
+    PrimaryButtonText="Add"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    IsPrimaryButtonEnabled="False">
+
+    <StackPanel Spacing="12" MinWidth="460">
+        <TextBox x:Name="SearchBox" PlaceholderText="Search your library"
+                 TextChanged="OnSearchChanged" />
+
+        <ListView x:Name="GamesList" SelectionMode="None" MaxHeight="380">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="models:GamePickItem">
+                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" Click="OnToggle" MinWidth="0">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Image Width="36" Height="48" Stretch="UniformToFill"
+                                   Source="{x:Bind CoverImageUrl}" />
+                            <TextBlock Text="{x:Bind Title}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="340" />
+                        </StackPanel>
+                    </CheckBox>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock x:Name="EmptyText" Visibility="Collapsed"
+                   Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap" />
+    </StackPanel>
+</ContentDialog>

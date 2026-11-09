@@ -1,0 +1,17 @@
+<ContentDialog
+    x:Class="Stackd.Views.CollectionEditDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="New collection"
+    PrimaryButtonText="Create"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <StackPanel Spacing="14" MinWidth="420">
+        <TextBox x:Name="NameBox" Header="Name" PlaceholderText="e.g. Weekend co-op" MaxLength="120" />
+        <TextBox x:Name="DescriptionBox" Header="Description (optional)"
+                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" MaxLength="500" />
+        <TextBlock x:Name="ErrorText" Visibility="Collapsed" Foreground="{StaticResource DangerBrush}" FontSize="13" />
+    </StackPanel>
+</ContentDialog>

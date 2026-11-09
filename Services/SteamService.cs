@@ -335,6 +335,15 @@ public class SteamService : ISteamService
             progress?.Report("Saving…");
             await db.SaveChangesAsync(ct);
 
+            try
+            {
+                await _secrets.SaveSteamLastSyncAsync(DateTime.UtcNow);
+            }
+            catch
+            {
+                // Si no se puede guardar la fecha, la sincronización sigue siendo válida.
+            }
+
             return new SteamSyncResult(true, null, owned.Count, added, linked, updated, achievementGames, rateLimited);
         }
         catch (OperationCanceledException)
