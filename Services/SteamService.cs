@@ -29,16 +29,57 @@ public class SteamService : ISteamService
     // Vinculación
     // ------------------------------------------------------------------
 
-    public async Task<SteamLinkResult> LinkAsync(string apiKey, string profileInput, CancellationToken ct = default)
+    /// <summary>True si los datos de Steam se piden al servidor de Stackd (sin API key del usuario).</summary>
+    public bool UsesServer => _secrets.HasServer;
+
+    /// <summary>
+    /// Construye la URL de una llamada a Steam. Con servidor, va al Worker (que añade la key);
+    /// sin servidor, directa a Steam con la key del usuario.
+    /// </summary>
+    private string BuildUrl(string path, string? apiKey, string query) =>
+        _secrets.HasServer
+            ? $"{_secrets.ServerUrl}/steam/{path}/?{query}"
+            : $"{ApiBase}/{path}/?key={apiKey}&{query}";
+
+    private string KeyRejectedMessage => UsesServer
+        ? "The Stackd server rejected the request. Try again later."
+        : "Steam rejected the API key. Check that you copied it correctly.";
+
+    public async Task<SteamLinkResult> SignInWithSteamAsync(string? apiKey, CancellationToken ct = default)
     {
-        apiKey = apiKey.Trim();
+        if (!UsesServer && string.IsNullOrWhiteSpace(apiKey) && string.IsNullOrWhiteSpace(_secrets.SteamApiKey))
+            return new SteamLinkResult(false,
+                "Enter your Steam Web API key under “Advanced” first, then sign in.");
+
+        var (steamId, error) = await SteamOpenIdLogin.SignInAsync(_http, ct);
+        if (steamId is null)
+            return new SteamLinkResult(false, error ?? "Sign-in failed.");
+
+        return await LinkAsync(apiKey, steamId, ct);
+    }
+
+    /// <summary>
+    /// Valida el perfil (SteamID64, URL o nombre personalizado) y guarda la vinculación.
+    /// La API key solo se usa sin servidor; si se deja vacía se reutiliza la guardada.
+    /// </summary>
+    public async Task<SteamLinkResult> LinkAsync(string? apiKey, string profileInput, CancellationToken ct = default)
+    {
+        apiKey = apiKey?.Trim();
         profileInput = profileInput.Trim();
 
-        if (apiKey.Length == 0 || profileInput.Length == 0)
-            return new SteamLinkResult(false, "Both the API key and your Steam profile are required.");
+        if (!UsesServer)
+        {
+            if (string.IsNullOrEmpty(apiKey)) apiKey = _secrets.SteamApiKey;
 
-        if (!Regex.IsMatch(apiKey, "^[0-9A-Fa-f]{32}$"))
-            return new SteamLinkResult(false, "The API key should be 32 characters (letters A-F and numbers).");
+            if (string.IsNullOrEmpty(apiKey))
+                return new SteamLinkResult(false, "A Steam Web API key is required.");
+
+            if (!Regex.IsMatch(apiKey, "^[0-9A-Fa-f]{32}$"))
+                return new SteamLinkResult(false, "The API key should be 32 characters (letters A-F and numbers).");
+        }
+
+        if (profileInput.Length == 0)
+            return new SteamLinkResult(false, "Your Steam profile is required.");
 
         try
         {
@@ -49,11 +90,15 @@ public class SteamService : ISteamService
 
             if (steamId is null)
             {
+                // El nombre personalizado solo se puede resolver con la key propia.
+                if (UsesServer)
+                    return new SteamLinkResult(false, "Use “Sign in with Steam” to link your account.");
+
                 var (status, node) = await GetJsonAsync(
                     $"{ApiBase}/ISteamUser/ResolveVanityURL/v1/?key={apiKey}&vanityurl={Uri.EscapeDataString(vanity!)}", ct);
 
                 if (status is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
-                    return new SteamLinkResult(false, "Steam rejected the API key. Check that you copied it correctly.");
+                    return new SteamLinkResult(false, KeyRejectedMessage);
                 if (node is null)
                     return new SteamLinkResult(false, $"Steam returned an error ({(int)status}). Try again in a moment.");
 
@@ -67,10 +112,10 @@ public class SteamService : ISteamService
             }
 
             var (pStatus, pNode) = await GetJsonAsync(
-                $"{ApiBase}/ISteamUser/GetPlayerSummaries/v2/?key={apiKey}&steamids={steamId}", ct);
+                BuildUrl("ISteamUser/GetPlayerSummaries/v2", apiKey, $"steamids={steamId}"), ct);
 
             if (pStatus is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
-                return new SteamLinkResult(false, "Steam rejected the API key. Check that you copied it correctly.");
+                return new SteamLinkResult(false, KeyRejectedMessage);
             if (pNode is null)
                 return new SteamLinkResult(false, $"Steam returned an error ({(int)pStatus}). Try again in a moment.");
 
@@ -85,7 +130,7 @@ public class SteamService : ISteamService
 
             var persona = player["personaname"]?.GetValue<string>();
 
-            await _secrets.SaveSteamLinkAsync(apiKey, steamId, persona);
+            await _secrets.SaveSteamLinkAsync(UsesServer ? null : apiKey, steamId, persona);
             return new SteamLinkResult(true, null, persona);
         }
         catch (OperationCanceledException)
@@ -146,8 +191,12 @@ public class SteamService : ISteamService
 
         try
         {
-            var key = _secrets.SteamApiKey!;
+            var key = _secrets.SteamApiKey;
             var steamId = _secrets.SteamId!;
+
+            if (!UsesServer && string.IsNullOrWhiteSpace(key))
+                return SteamSyncResult.Failed(
+                    "Your account is linked, but there is no Steam API key to read your library. Open Manage, add your key under “Advanced” and sign in again.");
 
             // 1) Biblioteca
             progress?.Report("Downloading your Steam library…");
@@ -302,15 +351,15 @@ public class SteamService : ISteamService
         }
     }
 
-    private async Task<(List<OwnedGame>? Games, string? Error)> GetOwnedGamesAsync(string key, string steamId, CancellationToken ct)
+    private async Task<(List<OwnedGame>? Games, string? Error)> GetOwnedGamesAsync(string? key, string steamId, CancellationToken ct)
     {
-        var url = $"{ApiBase}/IPlayerService/GetOwnedGames/v1/?key={key}&steamid={steamId}" +
-                  "&include_appinfo=1&include_played_free_games=1&format=json";
+        var url = BuildUrl("IPlayerService/GetOwnedGames/v1", key,
+            $"steamid={steamId}&include_appinfo=1&include_played_free_games=1&format=json");
 
         var (status, node) = await GetJsonAsync(url, ct);
 
         if (status is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
-            return (null, "Steam rejected your API key. Link your account again with a valid key.");
+            return (null, KeyRejectedMessage);
         if (node is null)
             return (null, $"Steam returned an error ({(int)status}). Try again in a moment.");
 
@@ -341,11 +390,11 @@ public class SteamService : ISteamService
         return (list, null);
     }
 
-    private async Task<AchievementResult?> GetAchievementsAsync(string key, string steamId, long appId, CancellationToken ct)
+    private async Task<AchievementResult?> GetAchievementsAsync(string? key, string steamId, long appId, CancellationToken ct)
     {
         try
         {
-            var url = $"{ApiBase}/ISteamUserStats/GetPlayerAchievements/v1/?key={key}&steamid={steamId}&appid={appId}";
+            var url = BuildUrl("ISteamUserStats/GetPlayerAchievements/v1", key, $"steamid={steamId}&appid={appId}");
             using var response = await _http.GetAsync(url, ct);
 
             if (response.StatusCode == HttpStatusCode.TooManyRequests)

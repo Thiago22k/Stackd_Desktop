@@ -12,12 +12,27 @@ public class SecretsService : ISecretsService
     public bool HasTwitchCredentials =>
         !string.IsNullOrWhiteSpace(TwitchClientId) && !string.IsNullOrWhiteSpace(TwitchClientSecret);
 
+    public string? ServerUrl { get; private set; } = NormalizeUrl(AppConfig.DefaultServerUrl);
+
+    public bool HasServer => ServerUrl is not null;
+
+    public bool HasIgdbAccess => HasServer || HasTwitchCredentials;
+
     public string? SteamApiKey { get; private set; }
     public string? SteamId { get; private set; }
     public string? SteamPersonaName { get; private set; }
 
-    public bool HasSteamLink =>
-        !string.IsNullOrWhiteSpace(SteamApiKey) && !string.IsNullOrWhiteSpace(SteamId);
+    public bool HasSteamLink => !string.IsNullOrWhiteSpace(SteamId);
+
+    private static string? NormalizeUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        var trimmed = url.Trim().TrimEnd('/');
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) &&
+               (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            ? trimmed
+            : null;
+    }
 
     private static readonly string[] CandidatePaths = new[]
     {
@@ -32,6 +47,7 @@ public class SecretsService : ISecretsService
         SteamApiKey = null;
         SteamId = null;
         SteamPersonaName = null;
+        ServerUrl = NormalizeUrl(AppConfig.DefaultServerUrl);
 
         foreach (var path in CandidatePaths)
         {
@@ -64,15 +80,20 @@ public class SecretsService : ISecretsService
                     var key = (steam["SteamApiKey"] ?? steam["ApiKey"])?.GetValue<string>()?.Trim();
                     var steamId = (steam["SteamId"] ?? steam["SteamID"])?.GetValue<string>()?.Trim();
 
-                    if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(steamId))
+                    // La API key es opcional: con el servidor de Stackd solo hace falta el SteamID.
+                    if (!string.IsNullOrWhiteSpace(steamId))
                     {
-                        SteamApiKey = key;
+                        SteamApiKey = string.IsNullOrWhiteSpace(key) ? null : key;
                         SteamId = steamId;
                         SteamPersonaName = steam["SteamPersonaName"]?.GetValue<string>()?.Trim();
                     }
                 }
 
-                if (HasTwitchCredentials && HasSteamLink) return;
+                // Permite probar un servidor sin recompilar (anula AppConfig.DefaultServerUrl).
+                if (node["ProxyUrl"]?.GetValue<string>() is { } proxyUrl && NormalizeUrl(proxyUrl) is { } normalized)
+                    ServerUrl = normalized;
+
+                if (HasTwitchCredentials && HasSteamLink && HasServer) return;
             }
             catch
             {
@@ -94,16 +115,17 @@ public class SecretsService : ISecretsService
         });
     }
 
-    public async Task SaveSteamLinkAsync(string apiKey, string steamId, string? personaName)
+    public async Task SaveSteamLinkAsync(string? apiKey, string steamId, string? personaName)
     {
-        SteamApiKey = apiKey.Trim();
+        SteamApiKey = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey.Trim();
         SteamId = steamId.Trim();
         SteamPersonaName = string.IsNullOrWhiteSpace(personaName) ? null : personaName.Trim();
 
         await UpdateFileAsync(root =>
         {
             root.Remove("Steam"); // por si el usuario lo había escrito anidado a mano
-            root["SteamApiKey"] = SteamApiKey;
+            if (SteamApiKey is null) root.Remove("SteamApiKey");
+            else root["SteamApiKey"] = SteamApiKey;
             root["SteamId"] = SteamId;
             root["SteamPersonaName"] = SteamPersonaName;
         });

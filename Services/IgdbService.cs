@@ -18,7 +18,7 @@ public class IgdbService : IIgdbService
     private DateTime _tokenExpiresAtUtc = DateTime.MinValue;
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
 
-    public bool IsConfigured => _secrets.HasTwitchCredentials;
+    public bool IsConfigured => _secrets.HasIgdbAccess;
 
     public IgdbService(ISecretsService secrets)
     {
@@ -81,12 +81,24 @@ public class IgdbService : IIgdbService
 
     private async Task<string?> QueryIgdbAsync(string apicalypseQuery, CancellationToken ct = default)
     {
-        var token = await GetAccessTokenAsync(ct);
-        if (token is null) return null;
+        HttpRequestMessage request;
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, IgdbBaseUrl);
-        request.Headers.Add("Client-ID", _secrets.TwitchClientId);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (_secrets.HasServer)
+        {
+            // El servidor de Stackd guarda el Client Secret, obtiene el token de Twitch y reenvía la consulta a IGDB.
+            request = new HttpRequestMessage(HttpMethod.Post, $"{_secrets.ServerUrl}/igdb/v4/games");
+        }
+        else
+        {
+            var token = await GetAccessTokenAsync(ct);
+            if (token is null) return null;
+
+            request = new HttpRequestMessage(HttpMethod.Post, IgdbBaseUrl);
+            request.Headers.Add("Client-ID", _secrets.TwitchClientId);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        using var _ = request;
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Content = new StringContent(apicalypseQuery, Encoding.UTF8, "text/plain");
 

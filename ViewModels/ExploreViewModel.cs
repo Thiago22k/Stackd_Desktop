@@ -51,7 +51,7 @@ public partial class ExploreViewModel : ObservableObject
     public async Task LoadAsync()
     {
         await _secrets.LoadAsync();
-        HasCredentials = _secrets.HasTwitchCredentials;
+        HasCredentials = _secrets.HasIgdbAccess;
 
         if (!HasCredentials)
         {

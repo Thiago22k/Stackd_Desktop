@@ -149,12 +149,12 @@ public sealed partial class GameEditDialog : ContentDialog
         try
         {
             var secrets = App.GetService<ISecretsService>();
-            if (!secrets.HasTwitchCredentials)
+            if (!secrets.HasIgdbAccess)
             {
                 await secrets.LoadAsync();
             }
 
-            if (!secrets.HasTwitchCredentials)
+            if (!secrets.HasIgdbAccess)
             {
                 IgdbStatusText.Text = "Twitch Client ID / Secret not found in secrets.json. Please configure them in the Explore tab.";
                 IgdbStatusText.Visibility = Visibility.Visible;
