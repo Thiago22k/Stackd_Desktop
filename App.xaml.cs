@@ -37,6 +37,7 @@ public partial class App : Application
                 services.AddSingleton<IIgdbService, IgdbService>();
                 services.AddSingleton<ISteamService, SteamService>();
                 services.AddSingleton<ICollectionService, CollectionService>();
+                services.AddSingleton<IGameMetadataService, GameMetadataService>();
 
                 // ViewModels
                 services.AddSingleton<ShellViewModel>();
@@ -56,6 +57,13 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         DbInitializer.Initialize(GetService<IDbContextFactory<AppDbContext>>());
+
+        // Limpieza de cachés antiguas sin bloquear el arranque.
+        _ = Task.Run(() =>
+        {
+            ResponseCache.Cleanup();
+            ImageCache.Cleanup();
+        });
 
         _window = GetService<MainWindow>();
         MainWindow = _window;

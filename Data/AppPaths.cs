@@ -14,6 +14,17 @@ public static class AppPaths
         }
     }
 
+    /// <summary>Datos que se pueden borrar sin perder nada (respuestas de IGDB, portadas).</summary>
+    public static string CacheDirectory
+    {
+        get
+        {
+            var dir = Path.Combine(DataDirectory, "cache");
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+    }
+
     public static string DatabaseFile => Path.Combine(DataDirectory, "stackd.db");
 
     public static string SecretsDirectory

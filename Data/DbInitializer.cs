@@ -13,6 +13,7 @@ public static class DbInitializer
         // Cuando el esquema se estabilice pasamos a Migrations.
         db.Database.EnsureCreated();
         EnsureColumn(db, "Games", "ExecutablePath", "TEXT");
+        EnsureColumn(db, "Games", "Genres", "TEXT");
 
 #if DEBUG
         // Datos de ejemplo para ver la interfaz mientras no hay importación real.

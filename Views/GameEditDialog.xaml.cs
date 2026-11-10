@@ -20,6 +20,7 @@ public sealed partial class GameEditDialog : ContentDialog
     private string _lastGuessedTitle = string.Empty;
     private long? _matchedIgdbId;
     private string? _matchedCoverUrl;
+    private string? _matchedGenres;
 
     /// <summary>Juego resultante (solo válido si se pulsó Save).</summary>
     public Game Result { get; private set; } = new();
@@ -29,6 +30,7 @@ public sealed partial class GameEditDialog : ContentDialog
         _existing = existing;
         _matchedIgdbId = existing?.IgdbId;
         _matchedCoverUrl = existing?.CoverUrl;
+        _matchedGenres = existing?.Genres;
         InitializeComponent();
 
         StatusBox.ItemsSource = Enum.GetValues<PlayStatus>();
@@ -193,6 +195,7 @@ public sealed partial class GameEditDialog : ContentDialog
         TitleBox.Text = selected.Name;
         _matchedIgdbId = selected.Id;
         _matchedCoverUrl = selected.CoverUrl;
+        _matchedGenres = Game.JoinGenres(selected.Genres);
 
         if (string.IsNullOrWhiteSpace(NotesBox.Text) && !string.IsNullOrWhiteSpace(selected.Summary))
         {
@@ -236,6 +239,7 @@ public sealed partial class GameEditDialog : ContentDialog
             IgdbId = _matchedIgdbId ?? _existing?.IgdbId,
             SteamAppId = _existing?.SteamAppId,
             CoverUrl = _matchedCoverUrl ?? _existing?.CoverUrl,
+            Genres = _matchedGenres,
             AddedAtUtc = _existing?.AddedAtUtc ?? DateTime.UtcNow,
             AchievementsUnlocked = _existing?.AchievementsUnlocked ?? 0,
             AchievementsTotal = _existing?.AchievementsTotal ?? 0,

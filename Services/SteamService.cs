@@ -14,13 +14,15 @@ public class SteamService : ISteamService
 
     private readonly ISecretsService _secrets;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IGameMetadataService _metadata;
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly SemaphoreSlim _syncLock = new(1, 1);
 
-    public SteamService(ISecretsService secrets, IDbContextFactory<AppDbContext> dbFactory)
+    public SteamService(ISecretsService secrets, IDbContextFactory<AppDbContext> dbFactory, IGameMetadataService metadata)
     {
         _secrets = secrets;
         _dbFactory = dbFactory;
+        _metadata = metadata;
     }
 
     public bool IsLinked => _secrets.HasSteamLink;
@@ -334,6 +336,9 @@ public class SteamService : ISteamService
 
             progress?.Report("Saving…");
             await db.SaveChangesAsync(ct);
+
+            // 5) Géneros desde IGDB (vincula los juegos de Steam con IGDB por su AppId). Si falla, no invalida la sincronización.
+            await _metadata.FillMissingGenresAsync(progress, ct);
 
             try
             {

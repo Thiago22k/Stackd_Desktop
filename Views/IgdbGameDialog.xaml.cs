@@ -34,7 +34,7 @@ public sealed partial class IgdbGameDialog : ContentDialog
             IsPrimaryButtonEnabled = false;
         }
 
-        if (!string.IsNullOrWhiteSpace(game.CoverUrl) && Uri.TryCreate(game.CoverUrl, UriKind.Absolute, out var uri))
+        if (Stackd.Services.ImageCache.Resolve(game.CoverUrl) is { } uri)
         {
             CoverImage.Source = new BitmapImage(uri);
         }

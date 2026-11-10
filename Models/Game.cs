@@ -26,7 +26,27 @@ public class Game
     public int AchievementsUnlocked { get; set; }
     public int AchievementsTotal { get; set; }
 
+    /// <summary>
+    /// Géneros de IGDB separados por <see cref="GenreSeparator"/>.
+    /// null = todavía no se han buscado; "" = se buscaron y IGDB no tiene ninguno (no se vuelve a pedir).
+    /// </summary>
+    public string? Genres { get; set; }
+
     public List<Collection> Collections { get; set; } = new();
+
+    public const char GenreSeparator = '|';
+
+    public static string JoinGenres(IEnumerable<string> genres) =>
+        string.Join(GenreSeparator, genres
+            .Select(g => g.Replace(GenreSeparator, '/').Trim())
+            .Where(g => g.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+
+    [NotMapped]
+    public IReadOnlyList<string> GenreList =>
+        string.IsNullOrEmpty(Genres)
+            ? Array.Empty<string>()
+            : Genres.Split(GenreSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     // ----- Propiedades de presentación (no se guardan en la BD) -----
     [NotMapped]

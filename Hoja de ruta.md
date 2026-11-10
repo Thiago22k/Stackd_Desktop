@@ -4,13 +4,6 @@
 Aplicación nativa de Windows: biblioteca personal de videojuegos. Registra lo que juegas, horas y logros (Steam), explora y busca con IGDB, tiene listas personalizadas y estadísticas.
 Repo: https://github.com/Thiago22k/Stackd_Desktop
 
-## Cómo trabajamos
-- Hablo en español. No tengo experiencia previa con C#/.NET: explícame cada paso y qué archivo tocar.
-- Uso Visual Studio 2022 en Windows. Claude no puede compilar ni ejecutar la app: entrega un .zip con solo los archivos nuevos o cambiados, con las carpetas del repo, y yo los copio encima del proyecto.
-- Claude solo tiene acceso de lectura al repo de GitHub. Los commits y pushes los hago yo.
-- Hay que traer el repo actualizado al empezar (git fetch). Aplicar y subir antes el último zip, Stackd_stats.zip (pantalla Stats), si no está en main.
-- Los diseños están en Canva (PDF "Stackd New Interface"). No hay diseño de Stats ni de Settings.
-
 ## Stack
 C# + .NET 8, WinUI 3 (Windows App SDK 1.6, sin empaquetar), MVVM con CommunityToolkit.Mvvm, inyección de dependencias con Microsoft.Extensions.Hosting, EF Core + SQLite (`%LOCALAPPDATA%\Stackd\stackd.db`).
 

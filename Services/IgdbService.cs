@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -79,7 +79,44 @@ public class IgdbService : IIgdbService
         }
     }
 
-    private async Task<string?> QueryIgdbAsync(string apicalypseQuery, CancellationToken ct = default)
+    // Cuánto tiempo se reutiliza una respuesta antes de volver a pedirla a IGDB.
+    private static readonly TimeSpan ListTtl = TimeSpan.FromHours(6);      // Popular / Most anticipated
+    private static readonly TimeSpan SearchTtl = TimeSpan.FromHours(12);
+    private static readonly TimeSpan DetailTtl = TimeSpan.FromDays(7);     // un juego por id, géneros
+
+    /// <summary>
+    /// Consulta con caché en disco: si hay una respuesta reciente no se llama a IGDB; si la llamada falla
+    /// (sin red, límite de peticiones…) se usa la última respuesta guardada aunque haya caducado.
+    /// </summary>
+    private async Task<string?> QueryIgdbAsync(string apicalypseQuery, TimeSpan ttl, CancellationToken ct = default)
+    {
+        var fresh = ResponseCache.TryGet(apicalypseQuery, ttl);
+        if (fresh is not null) return fresh;
+
+        string? json = null;
+        try
+        {
+            json = await FetchIgdbAsync(apicalypseQuery, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            // se intenta con la caché caducada más abajo
+        }
+
+        if (json is not null)
+        {
+            ResponseCache.Set(apicalypseQuery, json);
+            return json;
+        }
+
+        return ResponseCache.TryGet(apicalypseQuery, null);
+    }
+
+    private async Task<string?> FetchIgdbAsync(string apicalypseQuery, CancellationToken ct = default)
     {
         HttpRequestMessage request;
 
@@ -128,8 +165,8 @@ public class IgdbService : IIgdbService
             $"search \"{clean}\"; " +
             $"limit {limit};";
 
-        var exactTask = QueryIgdbAsync(exactApicalypse, ct);
-        var searchTask = QueryIgdbAsync(searchApicalypse, ct);
+        var exactTask = QueryIgdbAsync(exactApicalypse, SearchTtl, ct);
+        var searchTask = QueryIgdbAsync(searchApicalypse, SearchTtl, ct);
 
         await Task.WhenAll(exactTask, searchTask);
 
@@ -166,7 +203,7 @@ public class IgdbService : IIgdbService
             $"sort total_rating desc; " +
             $"limit {limit};";
 
-        var json = await QueryIgdbAsync(apicalypse, ct);
+        var json = await QueryIgdbAsync(apicalypse, ListTtl, ct);
         if (json is null) return Array.Empty<IgdbGame>();
 
         return ParseGames(json);
@@ -181,7 +218,7 @@ public class IgdbService : IIgdbService
             $"sort hypes desc; " +
             $"limit {limit};";
 
-        var json = await QueryIgdbAsync(apicalypse, ct);
+        var json = await QueryIgdbAsync(apicalypse, ListTtl, ct);
         if (json is null) return Array.Empty<IgdbGame>();
 
         return ParseGames(json);
@@ -194,11 +231,117 @@ public class IgdbService : IIgdbService
             $"where id = {igdbId}; " +
             $"limit 1;";
 
-        var json = await QueryIgdbAsync(apicalypse, ct);
+        var json = await QueryIgdbAsync(apicalypse, DetailTtl, ct);
         if (json is null) return null;
 
         var list = ParseGames(json);
         return list.Count > 0 ? list[0] : null;
+    }
+
+    // Lotes pequeños para no pasar del límite de 500 resultados de IGDB ni del tamaño de consulta del servidor.
+    private const int LookupBatchSize = 150;
+
+    // Origen "Steam" en external_games (external_game_source; antes "category").
+    private const int SteamExternalSource = 1;
+
+    public async Task<Dictionary<long, List<string>>?> GetGenresByIdsAsync(
+        IReadOnlyCollection<long> igdbIds, CancellationToken ct = default)
+    {
+        var result = new Dictionary<long, List<string>>();
+
+        foreach (var batch in igdbIds.Distinct().Chunk(LookupBatchSize))
+        {
+            var apicalypse =
+                $"fields id, genres.name; " +
+                $"where id = ({string.Join(',', batch)}); " +
+                $"limit 500;";
+
+            var json = await QueryIgdbAsync(apicalypse, DetailTtl, ct);
+            if (json is null) return null;
+
+            foreach (var g in ParseGames(json))
+                result[g.Id] = g.Genres;
+        }
+
+        return result;
+    }
+
+    public async Task<Dictionary<long, IgdbSteamMatch>?> FindBySteamAppIdsAsync(
+        IReadOnlyCollection<long> steamAppIds, CancellationToken ct = default)
+    {
+        var result = new Dictionary<long, IgdbSteamMatch>();
+
+        foreach (var batch in steamAppIds.Distinct().Chunk(LookupBatchSize))
+        {
+            var wanted = batch.Select(id => id.ToString()).ToHashSet();
+            var apicalypse =
+                $"fields id, genres.name, external_games.*; " +
+                $"where external_games.uid = ({string.Join(',', wanted.Select(u => $"\"{u}\""))}); " +
+                $"limit 500;";
+
+            var json = await QueryIgdbAsync(apicalypse, DetailTtl, ct);
+            if (json is null) return null;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array) continue;
+
+                foreach (var elem in doc.RootElement.EnumerateArray())
+                {
+                    if (!elem.TryGetProperty("id", out var idProp) || !idProp.TryGetInt64(out var igdbId)) continue;
+                    if (!elem.TryGetProperty("external_games", out var externals) ||
+                        externals.ValueKind != JsonValueKind.Array) continue;
+
+                    var genres = ReadNames(elem, "genres");
+
+                    foreach (var ext in externals.EnumerateArray())
+                    {
+                        if (ext.ValueKind != JsonValueKind.Object) continue;
+                        if (!ext.TryGetProperty("uid", out var uidProp) || uidProp.GetString() is not { } uid) continue;
+                        if (!wanted.Contains(uid) || !IsSteamSource(ext)) continue;
+                        if (!long.TryParse(uid, out var appId)) continue;
+
+                        // Si hay varias entradas (ediciones, relanzamientos) se queda la primera con géneros.
+                        if (!result.TryGetValue(appId, out var existing) || existing.Genres.Count == 0)
+                            result[appId] = new IgdbSteamMatch(igdbId, genres);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // respuesta inesperada: se sigue con el siguiente lote
+            }
+        }
+
+        return result;
+    }
+
+    private static bool IsSteamSource(JsonElement ext)
+    {
+        if (ext.TryGetProperty("external_game_source", out var src) && src.TryGetInt32(out var s))
+            return s == SteamExternalSource;
+        if (ext.TryGetProperty("category", out var cat) && cat.TryGetInt32(out var c))
+            return c == SteamExternalSource;
+
+        // Sin información de origen: se acepta solo si apunta a la tienda de Steam.
+        return ext.TryGetProperty("url", out var url) &&
+               url.GetString()?.Contains("store.steampowered.com", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private static List<string> ReadNames(JsonElement elem, string property)
+    {
+        var names = new List<string>();
+        if (elem.TryGetProperty(property, out var arr) && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in arr.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.Object &&
+                    item.TryGetProperty("name", out var n) && n.GetString() is { } name)
+                    names.Add(name);
+            }
+        }
+        return names;
     }
 
     private static List<IgdbGame> ParseGames(string json)

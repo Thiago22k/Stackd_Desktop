@@ -1,4 +1,4 @@
-<ContentDialog
+﻿<ContentDialog
     x:Class="Stackd.Views.GamePickerDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -19,7 +19,7 @@
                     <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" Click="OnToggle" MinWidth="0">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <Image Width="36" Height="48" Stretch="UniformToFill"
-                                   Source="{x:Bind CoverImageUrl}" />
+                                   Source="{x:Bind CoverImageUrl, Converter={StaticResource CachedImage}}" />
                             <TextBlock Text="{x:Bind Title}" VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis" MaxWidth="340" />
                         </StackPanel>

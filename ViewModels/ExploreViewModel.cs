@@ -196,6 +196,7 @@ public partial class ExploreViewModel : ObservableObject
                 IgdbId = igdbGame.Id,
                 CoverUrl = igdbGame.CoverUrl,
                 Notes = igdbGame.Summary,
+                Genres = Game.JoinGenres(igdbGame.Genres),
                 Status = initialStatus,
                 AddedAtUtc = DateTime.UtcNow
             };
