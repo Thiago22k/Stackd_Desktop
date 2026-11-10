@@ -45,6 +45,7 @@ public partial class App : Application
                 services.AddTransient<ExploreViewModel>();
                 services.AddTransient<CollectionsViewModel>();
                 services.AddTransient<CollectionDetailViewModel>();
+                services.AddTransient<StatsViewModel>();
 
                 // Ventanas
                 services.AddSingleton<MainWindow>();
