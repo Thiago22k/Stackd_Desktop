@@ -24,7 +24,8 @@ C# + .NET 8, WinUI 3 (Windows App SDK 1.6, sin empaquetar), MVVM con CommunityTo
 4. Collections: crear, editar, borrar, mosaico de portadas, añadir y quitar juegos, "Add to collection…" desde Library.
 5. Steam: iniciar sesión con Steam (OpenID), importar juegos, horas, última vez jugado, portadas y logros, vincular con juegos manuales por nombre, abrir juegos con steam://rungameid, sincronización automática cada 24 h, insignia STEAM y filtro de origen en Library.
 6. Servidor en Cloudflare Workers: guarda la API key de Steam y el Client Secret de IGDB. La app lo usa si hay URL configurada en `AppConfig.DefaultServerUrl` o en `ProxyUrl` de secrets.json. Sin servidor, pide la API key de Steam y usa las credenciales de IGDB locales.
-7. Stats: horas totales, juegos, completados, logros, barras por estado, más jugados, progreso de logros y datos sueltos.
+7. Stats: horas totales, juegos, completados, logros, barras por estado, más jugados, progreso de logros, datos sueltos y desglose de géneros más jugados.
+8. Rendimiento y caché: ImageCache y ResponseCache en disco para portadas y respuestas IGDB, CachedImageConverter y persistencia de géneros en base de datos.
 
 ## Configuración
 `%LOCALAPPDATA%\Stackd\secrets.json` puede tener: IgdbClientId, IgdbClientSecret, SteamApiKey, SteamId, SteamPersonaName, SteamLastSyncUtc y ProxyUrl. Los secretos reales no se pegan en el chat.
@@ -36,9 +37,7 @@ C# + .NET 8, WinUI 3 (Windows App SDK 1.6, sin empaquetar), MVVM con CommunityTo
 - Hardware Profile: primero solo detección.
 
 ## Pendientes y deuda técnica
-- **Caché:** no se cachean las respuestas de IGDB ni las imágenes, así que Explore vuelve a pedir todo cada vez. Solución: caché en disco o SQLite con expiración y reutilizar las portadas.
 - Migraciones de EF Core en lugar de EnsureCreated y EnsureColumn (antes de repartir la app).
-- La base de datos no guarda géneros, así que falta el stat "géneros más jugados".
 - No hay historial de sesiones, así que no hay actividad por semana ni por mes.
 - Las sesiones de juegos de Steam abiertos con steam:// no se cuentan en Stackd (las horas llegan al sincronizar).
 - En Explore no se puede añadir a una colección sin importar antes el juego.
@@ -49,12 +48,10 @@ C# + .NET 8, WinUI 3 (Windows App SDK 1.6, sin empaquetar), MVVM con CommunityTo
 
 ## Hoja de ruta propuesta
 **Siguiente (corto plazo)**
-1. Guardar géneros al importar de IGDB y vincular con Steam, y completar Stats con los géneros.
-2. Caché de IGDB e imágenes.
-3. Settings: cuentas (Steam e IGDB), estado del servidor, sincronización automática y borrar datos locales.
-4. Hardware Profile mínimo: CPU, GPU, RAM, almacenamiento y Windows.
-5. Migraciones de base de datos.
-6. Icono (.ico desde el isotipo) e instalador.
+1. Settings: cuentas (Steam e IGDB), estado del servidor, sincronización automática y borrar datos locales.
+2. Hardware Profile mínimo: CPU, GPU, RAM, almacenamiento y Windows.
+3. Migraciones de base de datos.
+4. Icono (.ico desde el isotipo) e instalador.
 
 **Después**
 7. Barra lateral colapsable.
